@@ -1,0 +1,67 @@
+/* Apply a box-sizing border-box to all elements */
+* {
+  box-sizing: border-box;
+}
+
+/* Set body margin and font family */
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Style for the top navigation bar */
+.topnav {
+  background-color: #333;
+  color: #fff;
+  padding: 10px;
+}
+
+.topnav h1 {
+  margin: 0;
+}
+
+/* Style for the content area */
+.content {
+  padding: 20px;
+}
+
+/* Style for the card grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-gap: 20px;
+}
+
+/* Style for the card */
+.card {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 20px;
+}
+
+/* Style for the form elements */
+label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+input[type="submit"] {
+  background-color: #4CAF50;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+input[type="submit"]:hover {
+  background-color: #3e8e41;
+}

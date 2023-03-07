@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pet Feeder Wi-Fi Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+  <div class="topnav">
+    <h1>Pet Feedr Wi-Fi Manager</h1>
+  </div>
+  <div class="content">
+    <div class="card-grid">
+      <div class="card">
+        <form action="/" method="POST">
+          <p>
+            <label for="ssid">SSID</label>
+            <select id="ssid" name="ssid">
+              <option value="">Select SSID</option>
+            </select><br>
+            <label for="password">Password</label>
+            <input type="text" id="pass" name="password"><br>
+            <input type="submit" value="Submit">
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script>
+    var select = document.getElementById("ssid");
+
+    fetch("/get_ssid_list")
+      .then(response => response.json())
+      .then(data => {
+        data.forEach(ssid => {
+          var option = document.createElement("option");
+          option.text = ssid;
+          select.add(option);
+        });
+      })
+      .catch(error => console.error(error));
+  </script>
+</body>
+</html>
