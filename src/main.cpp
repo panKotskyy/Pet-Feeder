@@ -9,6 +9,30 @@
 #include <FS.h>
 #include <SD.h>
 #include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+#define LOGO_HEIGHT   11
+#define LOGO_WIDTH    16
+static const unsigned char PROGMEM logo_bmp[] =
+{ 0b00000110, 0b00110000,
+  0b00000110, 0b00110000,
+  0b00000110, 0b00110000,
+  0b00110000, 0b00000110,
+  0b01110001, 0b10000111,
+  0b01100011, 0b11000011,
+  0b00000111, 0b11100000,
+  0b00011111, 0b11111000,
+  0b00111111, 0b11111100,
+  0b00111110, 0b01111100,
+  0b00001100, 0b00110000 };
+
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 // Define the Config struct
 struct Config {
@@ -354,11 +378,38 @@ void handleTelegram() {
   }
 }
 
+void initDisplay() {
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;);
+  }
+}
+
+void displayLogo() {
+  display.clearDisplay();
+
+  display.drawBitmap(
+    (display.width() - LOGO_WIDTH)/2,
+    (display.height() - LOGO_HEIGHT)/2 - 10,
+    logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, 1);
+    
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(35, 32);
+  // Display static text
+  display.println("PET FEEDER");
+  display.setCursor(33, 42);
+  display.println("v0.1 (beta)");
+  display.display();
+}
+
 void setup() {
   Serial.begin(115200);
   
+  initDisplay();
   initSDCard();
   getConfig();
+  displayLogo();
 
   if (initWiFi()) {
     initWebServer();
