@@ -43,8 +43,11 @@ int botRequestDelay = 1000; // Checks for new messages every 1 second.
 unsigned long lastTimeBotRan;
 
 // Timer variables
+unsigned long currentMillis = 0;
 unsigned long previousMillis = 0;
+unsigned long lastTimeWiFiReconects = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
+const long wifiReconectInterval = 30000;  // interval between Wi-Fi reconecting tries (milliseconds)
 String ssidList = "";
 
 // Create AsyncWebServer object on port 80
@@ -74,6 +77,15 @@ void initSDCard(){
   }
   uint64_t cardSize = SD.cardSize() / (1024 * 1024);
   Serial.printf("SD Card Size: %lluMB\n", cardSize);
+}
+
+void deleteFile(fs::FS &fs, const char * path){
+  Serial.printf("Deleting file: %s\n", path);
+  if(fs.remove(path)){
+    Serial.println("File deleted");
+  } else {
+    Serial.println("Delete failed");
+  }
 }
 
 void getConfig() {
@@ -106,21 +118,24 @@ void getConfig() {
 }
 
 void saveConfig() {
-  // Open the JSON file
-  File configFile = SD.open("/config.json");
-  if (!configFile) {
-    Serial.println("Failed to open config file");
-    return;
-  }
+  // Open the JSON file in "read" mode
+  File configFile = SD.open("/config.json", FILE_READ);
 
   // Parse the JSON data
   StaticJsonDocument<512> configJson;
-  DeserializationError error = deserializeJson(configJson, configFile);
-  configFile.close();
-  if (error) {
-    Serial.print("Failed to parse JSON: ");
-    Serial.println(error.c_str());
-    return;
+  if (!configFile || configFile.size() == 0) {
+    Serial.println("Config file does not exist or is empty.");
+    if (configFile) {
+      configFile.close();
+    }
+  } else {
+    DeserializationError error = deserializeJson(configJson, configFile);
+    configFile.close();
+    if (error) {
+      Serial.print("Failed to parse JSON: ");
+      Serial.println(error.c_str());
+      return;
+    }
   }
 
   // Update the values in the JSON data
@@ -152,6 +167,17 @@ void saveConfig() {
   // delay(5000); // Wait for 5 seconds before updating the next field
 }
 
+void handleWiFi() {
+  if ((WiFi.getMode() == WIFI_STA) && (WiFi.status() != WL_CONNECTED)) {
+    if (millis() - lastTimeWiFiReconects >= wifiReconectInterval) {
+      Serial.println("Reconnecting to WiFi...");
+      WiFi.disconnect();
+      WiFi.reconnect();
+      lastTimeWiFiReconects = millis();
+    }
+  }
+}
+
 void WiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info){
   Serial.println("Connected to AP successfully!");
 }
@@ -168,6 +194,7 @@ void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info){
   Serial.println(info.wifi_sta_disconnected.reason);
   // Serial.println("Trying to Reconnect");
   // WiFi.begin(config.ssid.c_str(), config.password.c_str());
+  handleWiFi();
 }
 
 bool initWiFi() {
@@ -183,24 +210,20 @@ bool initWiFi() {
 
   WiFi.onEvent(WiFiStationConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
   WiFi.onEvent(WiFiGotIP, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
-  // WiFi.onEvent(WiFiStationDisconnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+  WiFi.onEvent(WiFiStationDisconnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(config.ssid.c_str(), config.password.c_str());
   Serial.println("Connecting to WiFi...");
 
-  unsigned long currentMillis = millis();
-  previousMillis = currentMillis;
+  previousMillis = millis();
 
   while(WiFi.status() != WL_CONNECTED) {
-    currentMillis = millis();
-    if (currentMillis - previousMillis >= interval) {
+    if (millis() - previousMillis >= interval) {
       Serial.println("Failed to connect.");
       return false;
     }
   }
-
-  Serial.println(WiFi.localIP());
   
   client.setCACert(TELEGRAM_CERTIFICATE_ROOT);
   bot.sendMessage(CHAT_ID, "Bot Started", "");
@@ -228,6 +251,11 @@ void handleNewMessages(int numNewMessages) {
 
     if (text == "/show_config") {
       bot.sendMessage(chat_id, config.toString(), "");
+    }
+
+    if (text == "/delete_config") {
+      deleteFile(SD, "/config.json");
+      bot.sendMessage(chat_id, "Config deleted. Rebooting....", "");
     }
     
     if (text == "/led_off") {
@@ -311,6 +339,21 @@ void initWebServer() {
   server.begin();
 }
 
+void handleTelegram() {
+  if ((WiFi.getMode() == WIFI_STA) && (WiFi.status() == WL_CONNECTED)) {
+    if (millis() > lastTimeBotRan + botRequestDelay) {
+      int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+
+      while(numNewMessages) {
+        Serial.println("got response");
+        handleNewMessages(numNewMessages);
+        numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+      }
+      lastTimeBotRan = millis();
+    }
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   
@@ -325,26 +368,7 @@ void setup() {
 }
 
 void loop() {
-  unsigned long currentMillis = millis();
-  // if WiFi is down, try reconnecting every CHECK_WIFI_TIME seconds
-  if ((WiFi.getMode() == WIFI_STA) && (WiFi.status() != WL_CONNECTED)) {
-    if (currentMillis - previousMillis >=interval) {
-      Serial.print(millis());
-      Serial.println("Reconnecting to WiFi...");
-      WiFi.disconnect();
-      WiFi.reconnect();
-      previousMillis = currentMillis;
-    }
-  }
 
-  if (millis() > lastTimeBotRan + botRequestDelay) {
-    int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
-
-    while(numNewMessages) {
-      Serial.println("got response");
-      handleNewMessages(numNewMessages);
-      numNewMessages = bot.getUpdates(bot.last_message_received + 1);
-    }
-    lastTimeBotRan = millis();
-  }
+  handleTelegram();
+  
 }
