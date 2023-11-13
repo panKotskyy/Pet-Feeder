@@ -12,6 +12,11 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <ESP32Servo.h>
+
+//PINS
+#define SERVO         13
+static const int servoPin = 13;
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -33,6 +38,9 @@ static const unsigned char PROGMEM logo_bmp[] =
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+// Declaration SG90RS
+Servo lid;
+
 
 // Define the Config struct
 struct Config {
@@ -403,10 +411,32 @@ void displayLogo() {
   display.display();
 }
 
+void initLid() {
+  lid.attach(servoPin);
+
+  lid.write(90);
+  delay(3000);
+
+  lid.write(45);
+  delay(3000);
+
+  lid.write(90);
+  delay(3000);
+
+  lid.write(135);
+  delay(3000);
+
+  lid.write(90);
+  delay(3000);
+
+  lid.detach();
+}
+
 void setup() {
   Serial.begin(115200);
   
   initDisplay();
+  // initLid();
   initSDCard();
   getConfig();
   displayLogo();
