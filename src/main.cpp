@@ -13,10 +13,18 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <ESP32Servo.h>
+#include <HX711.h>
 
 //PINS
 #define SERVO         13
 static const int servoPin = 13;
+
+// HX711 circuit wiring
+#define LOADCELL_DOUT   3
+#define LOADCELL_SCK    4
+HX711 scale;
+float const factor = 14966.87;
+int ONE_PORTION = 15;
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -432,6 +440,30 @@ void initLid() {
   lid.detach();
 }
 
+void initScale() {
+  scale.begin(LOADCELL_DOUT, LOADCELL_SCK);
+  scale.set_scale(factor);    // this value is obtained by calibrating the scale with known weights; see the README for details
+  scale.tare();               // reset the scale to 0
+}
+
+void serveFood() {
+  Serial.println("Serving the food...");
+
+  float portion = 0;
+  while(portion < ONE_PORTION) {
+    portion = scale.get_units();
+    Serial.print("Current portion weight:\t");
+    Serial.println(portion);
+  }
+  
+  Serial.println("One portion is weighed!");
+
+  portion = 0;
+  scale.power_down();              // put the ADC in sleep mode
+  delay(5000);
+  scale.power_up();
+}
+
 void setup() {
   Serial.begin(115200);
   
@@ -440,6 +472,7 @@ void setup() {
   initSDCard();
   getConfig();
   displayLogo();
+  initScale();
 
   if (initWiFi()) {
     initWebServer();
@@ -451,5 +484,7 @@ void setup() {
 void loop() {
 
   handleTelegram();
+
+  serveFood();
   
 }
