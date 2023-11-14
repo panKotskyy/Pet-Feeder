@@ -14,6 +14,7 @@
 #include <Adafruit_SSD1306.h>
 #include <ESP32Servo.h>
 #include <HX711.h>
+#include <OneButton.h>
 
 //PINS
 #define SERVO         13
@@ -49,6 +50,12 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 // Declaration SG90RS
 Servo lid;
 
+// Setup buttons
+#define BTN1    14
+#define BTN2    27
+OneButton button1(BTN1, true);
+OneButton button2(BTN2, true);
+
 
 // Define the Config struct
 struct Config {
@@ -79,7 +86,7 @@ Config config;
 #define CHAT_ID "-948044538"
 WiFiClientSecure client;
 UniversalTelegramBot bot(BOTtoken, client);
-int botRequestDelay = 1000; // Checks for new messages every 1 second.
+int botRequestDelay = 5000; // Checks for new messages every 1 second.
 unsigned long lastTimeBotRan;
 
 // Timer variables
@@ -446,6 +453,30 @@ void initScale() {
   scale.tare();               // reset the scale to 0
 }
 
+void click1() {
+  Serial.println("Button 1 click.");
+}
+
+void click2() {
+  Serial.println("Button 2 click.");
+}
+
+void initButtons() {
+  // link the button 1 functions.
+  button1.attachClick(click1);
+  // button1.attachDoubleClick(doubleclick1);
+  // button1.attachLongPressStart(longPressStart1);
+  // button1.attachLongPressStop(longPressStop1);
+  // button1.attachDuringLongPress(longPress1);
+
+  // link the button 2 functions.
+  button2.attachClick(click2);
+  // button2.attachDoubleClick(doubleclick2);
+  // button2.attachLongPressStart(longPressStart2);
+  // button2.attachLongPressStop(longPressStop2);
+  // button2.attachDuringLongPress(longPress2);
+}
+
 void serveFood() {
   Serial.println("Serving the food...");
 
@@ -473,6 +504,7 @@ void setup() {
   getConfig();
   displayLogo();
   initScale();
+  initButtons();
 
   if (initWiFi()) {
     initWebServer();
@@ -483,8 +515,12 @@ void setup() {
 
 void loop() {
 
+// keep watching the push buttons:
+  button1.tick();
+  button2.tick();
+
   handleTelegram();
 
-  serveFood();
+  // serveFood();
   
 }
