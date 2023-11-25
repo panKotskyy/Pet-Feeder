@@ -49,6 +49,7 @@ static const unsigned char PROGMEM logo_bmp[] =
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 // Declaration SG90RS
 Servo lid;
+boolean lidOpen = false;
 
 // Setup buttons
 #define BTN1    14
@@ -56,6 +57,7 @@ Servo lid;
 OneButton button1(BTN1, true);
 OneButton button2(BTN2, true);
 
+#define IMPACT1 12
 
 // Define the Config struct
 struct Config {
@@ -455,10 +457,28 @@ void initScale() {
 
 void click1() {
   Serial.println("Button 1 click.");
+  lid.attach(SERVO);
+  while (!lidOpen)
+  {
+    lid.write(45);
+  }
+  lid.detach();
+  Serial.println("Servo stop.");
 }
 
 void click2() {
   Serial.println("Button 2 click.");
+  lid.attach(SERVO);
+  while (!lidOpen)
+  {
+    lid.write(135);
+  }
+  while (lidOpen)
+  {
+    lid.write(45);
+  }
+  lid.detach();
+  Serial.println("Servo stop.");
 }
 
 void initButtons() {
@@ -475,6 +495,19 @@ void initButtons() {
   // button2.attachLongPressStart(longPressStart2);
   // button2.attachLongPressStop(longPressStop2);
   // button2.attachDuringLongPress(longPress2);
+}
+
+void IRAM_ATTR detectsLidMovement() {
+  if (digitalRead(IMPACT1) == HIGH) {
+    lidOpen = false;
+  } else {
+    lidOpen = true;
+  }
+}
+
+void initImpact() {
+  pinMode(IMPACT1, INPUT);
+  attachInterrupt(digitalPinToInterrupt(IMPACT1), detectsLidMovement, CHANGE);
 }
 
 void serveFood() {
@@ -505,6 +538,7 @@ void setup() {
   displayLogo();
   initScale();
   initButtons();
+  initImpact();
 
   if (initWiFi()) {
     initWebServer();
