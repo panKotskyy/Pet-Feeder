@@ -15,6 +15,7 @@
 #include <ESP32Servo.h>
 #include <HX711.h>
 #include <OneButton.h>
+#include <AsyncElegantOTA.h>
 
 //PINS
 #define SERVO         13
@@ -57,7 +58,7 @@ boolean lidOpen = false;
 OneButton button1(BTN1, true);
 OneButton button2(BTN2, true);
 
-#define IMPACT1 12
+#define IMPACT1 35
 
 // Define the Config struct
 struct Config {
@@ -310,6 +311,10 @@ void handleNewMessages(int numNewMessages) {
     if (text == "/led_off") {
       bot.sendMessage(chat_id, "LED state set to OFF", "");
     }
+
+    if (text == "/ota") {
+      bot.sendMessage(chat_id, "ota link", "");
+    }
     
     if (text == "/state") {
       bot.sendMessage(chat_id, "state command received", ""); 
@@ -385,6 +390,7 @@ void initWebServer() {
   });
   
   server.serveStatic("/", SD, "/");
+  AsyncElegantOTA.begin(&server); 
   server.begin();
 }
 
